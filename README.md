@@ -18,9 +18,9 @@ A modern QR code studio for Laravel. Inspired by and built upon the foundation o
 
 ## Requirements
 
-| Package version | Laravel | PHP   |
-|-----------------|---------|-------|
-| 1.x             | 11, 12  | 8.2+  |
+| Package version | Laravel      | PHP   |
+|-----------------|--------------|-------|
+| 1.x             | 11, 12, 13   | 8.2+  |
 
 ## Installation
 
@@ -77,19 +77,39 @@ This creates `config/qr-studio.php`:
 ```php
 use Devxisas\QrStudio\Enums\ErrorCorrection;
 use Devxisas\QrStudio\Enums\Format;
+use Devxisas\QrStudio\Enums\Theme;
 
 return [
-    'format'           => Format::Svg,           // Format enum or 'svg' | 'eps' | 'png'
-    'size'             => 100,                    // pixels
-    'margin'           => 0,                      // quiet zone around the code
+    // Output
+    'format'           => Format::Svg,            // Format enum or 'svg' | 'eps' | 'png'
+    'size'             => 100,                     // pixels
+    'margin'           => 0,                       // quiet zone around the code
     'error_correction' => ErrorCorrection::Medium, // enum or 'L' | 'M' | 'Q' | 'H'
-    'encoding'         => 'UTF-8',               // character encoding
+    'encoding'         => 'UTF-8',                 // character encoding
+
+    // Visual theme — applies a full visual preset to every QR code globally
+    'theme'            => null,                    // null | 'ocean'|'sunset'|'forest'|'midnight'|'coral' | Theme enum
+
+    // Storage — used by saveToDisk() when no disk/path is specified per call
+    'disk'             => 'local',                 // any disk from config/filesystems.php
+    'path'             => 'qrcodes',               // default directory on that disk
 ];
 ```
 
 These defaults are applied to every QR code generated through the `QrCode` facade, the `@qrcode` Blade directive, and the `response()->qrcode()` macro. Per-call options always take precedence over config defaults.
 
-> **Scope of defaults:** `format`, `size`, `margin`, `error_correction`, and `encoding` can be set globally. Options like `style`, `eye`, `color`, and `gradient` are always set per call since they are visual choices that vary per use case.
+| Key | Scope | Default |
+|-----|-------|---------|
+| `format` | Global | `Format::Svg` |
+| `size` | Global | `100` |
+| `margin` | Global | `0` |
+| `error_correction` | Global | `ErrorCorrection::Medium` |
+| `encoding` | Global | `'UTF-8'` |
+| `theme` | Global | `null` (disabled) |
+| `disk` | saveToDisk | `'local'` |
+| `path` | saveToDisk | `'qrcodes'` |
+
+> **Note:** `style`, `eye`, `color`, `gradient`, and `eyeColor` are always per-call — they are not configurable globally as they are visual choices that vary per use case.
 
 ---
 
@@ -475,7 +495,104 @@ QrCode::calendarEvent([
 ]);
 ```
 
-![Data types — Email, Phone, SMS, Geo, WiFi, BTC, vCard, MeCard, Calendar](docs/images/data-types.png)
+### WhatsApp
+
+Generates a `wa.me` deep-link QR code. Scanning it opens WhatsApp with the number pre-filled and, when a message is provided, the text pre-typed in the message box.
+
+```php
+QrCode::whatsApp('+50312345678');
+
+// With pre-filled message
+QrCode::whatsApp('+50312345678', '¡Hola! Vi tu QR y quiero más información.');
+```
+
+The phone number is normalised to digits only — international format is required (`+503` → `503`).
+
+![Data types — Email, Phone, SMS, Geo, WiFi, BTC, vCard, MeCard, Calendar, WhatsApp](docs/images/data-types.png)
+
+---
+
+## Themes
+
+Apply a complete visual preset — colors, gradient, module style, and eye style — with a single call. Any option chained after `theme()` overrides the preset.
+
+```php
+use Devxisas\QrStudio\Enums\Theme;
+
+QrCode::theme('ocean')->generate('...');
+QrCode::theme(Theme::Sunset)->generate('...');
+
+// Per-call options override the theme
+QrCode::theme('ocean')->size(300)->eye('square')->generate('...');
+
+// Set a global default in config/qr-studio.php
+'theme' => 'ocean',
+'theme' => Theme::Midnight,
+```
+
+| Theme | Description |
+|-------|-------------|
+| `ocean` | Deep blue → cyan radial gradient · dot modules · circle eyes |
+| `sunset` | Orange → crimson diagonal gradient · square eyes |
+| `forest` | Dark green → mint vertical gradient · round modules · square eyes |
+| `midnight` | Light blue-white text on deep navy background |
+| `coral` | Coral → hot-pink horizontal gradient · dot modules · circle eyes |
+
+> **Note:** Themes that use `dot` or `round` modules automatically set `errorCorrection('H')` to ensure scannability.
+
+![Built-in themes — ocean, sunset, forest, midnight, coral](docs/images/themes.png)
+
+---
+
+## saveToDisk()
+
+Save any QR code directly to a Laravel filesystem disk (local, S3, public, etc.).
+
+```php
+// Save to default disk ('local') at default path ('qrcodes/')
+$path = QrCode::format('png')->size(300)->saveToDisk(
+    'https://devxi.com',
+    'my-qr.png'
+);
+// → saves to storage/app/qrcodes/my-qr.png
+// → returns 'qrcodes/my-qr.png'
+
+// Full path — directory separator present, no prefix added
+QrCode::saveToDisk('https://devxi.com', 'invoices/2025/001F.svg');
+
+// Override disk per call (any disk from config/filesystems.php)
+QrCode::format('png')->saveToDisk('https://devxi.com', 'qr.png', 's3');
+
+// Get a public URL after saving
+$url = Storage::disk('s3')->url($path);
+
+// Combine with themes
+QrCode::theme('ocean')->format('png')->size(400)->saveToDisk(
+    'https://devxi.com',
+    'branded.png',
+    's3'
+);
+```
+
+**Path resolution:** when `$filename` contains no `/`, the `path` from config is prepended automatically (`'qr.png'` → `'qrcodes/qr.png'`). Pass a full relative path to override this.
+
+Configure the defaults in `config/qr-studio.php`:
+
+```php
+'disk' => 's3',         // default disk for all saveToDisk() calls
+'path' => 'qrcodes',    // default directory when filename has no '/'
+```
+
+**`HasQrCode` models** also get `saveQrCodeToDisk()`:
+
+```php
+// Save the model's QR code to disk
+$document->saveQrCodeToDisk('facturas/001F.png');
+$document->saveQrCodeToDisk('001F.png', 's3');            // override disk
+$user->saveQrCodeToDisk('contacts/elmer.png', null, Format::Svg);  // SVG
+```
+
+![saveToDisk — code example](docs/images/save-to-disk.png)
 
 ---
 
@@ -963,6 +1080,78 @@ QrCode::gradient(59, 130, 246, 168, 85, 247, GradientType::Radial)->generate('..
 
 ---
 
+### theme()
+
+**Signature:** `theme(Theme|string $theme): static`
+
+**Description:** Applies a built-in visual preset to the QR code. The preset configures colors, gradient, module style, and eye style in a single call. Any method chained _after_ `theme()` overrides the corresponding preset value.
+
+**Available themes:** `ocean`, `sunset`, `forest`, `midnight`, `coral` (use the `Theme` enum or a plain string).
+
+**Parameters:**
+
+| Name     | Type               | Required | Description                          |
+|----------|--------------------|----------|--------------------------------------|
+| `$theme` | `Theme\|string`    | Yes      | Theme name or `Theme` enum case      |
+
+**Exceptions:** `InvalidArgumentException` if an unrecognised theme name is passed.
+
+**Example:**
+
+```php
+use Devxisas\QrStudio\Enums\Theme;
+
+// Apply a preset
+QrCode::theme('ocean')->size(300)->generate('https://devxi.com');
+
+// Override one value from the preset
+QrCode::theme(Theme::Sunset)->size(300)->color(0, 0, 0)->generate('...');
+```
+
+---
+
+### saveToDisk()
+
+**Signature:** `saveToDisk(string $text, string $filename, ?string $disk = null): string`
+
+**Description:** Generates the QR code and persists it to a Laravel filesystem disk. Returns the storage path where the file was written. Calls `reset()` automatically after execution.
+
+- When `$filename` contains no `/`, the configured `path` from `config('qr-studio.path')` is prepended automatically.
+- When `$disk` is `null`, the configured `disk` from `config('qr-studio.disk')` is used.
+- The file extension in `$filename` determines nothing — use `format()` to control the output format.
+
+**Parameters:**
+
+| Name        | Type      | Required | Description                                                  |
+|-------------|-----------|----------|--------------------------------------------------------------|
+| `$text`     | `string`  | Yes      | The content to encode in the QR code                        |
+| `$filename` | `string`  | Yes      | Storage path (e.g. `'user-42.png'` or `'invoices/qr.svg'`) |
+| `$disk`     | `?string` | No       | Filesystem disk name. `null` = use config default           |
+
+**Returns:** `string` — the storage path where the file was saved.
+
+**Exceptions:** `WriterException` if the QR writer fails. `RuntimeException` if the disk cannot write.
+
+**Example:**
+
+```php
+// Save to default disk and path (config defaults)
+$path = QrCode::format('png')->size(300)->saveToDisk('https://devxi.com', 'user-42.png');
+// → "qrcodes/user-42.png"
+
+// Explicit directory in filename — skips config path prefix
+$path = QrCode::saveToDisk('https://devxi.com', 'invoices/2025/001F.svg');
+// → "invoices/2025/001F.svg"
+
+// Save to S3
+$path = QrCode::format('png')->saveToDisk('https://devxi.com', 'qr.png', 's3');
+
+// Combine theme + saveToDisk
+QrCode::theme('ocean')->format('png')->size(400)->saveToDisk('https://devxi.com', 'ocean.png', 's3');
+```
+
+---
+
 ### merge()
 
 **Signature:** `merge(string $filepath, float $percentage = 0.2, bool $absolute = false): static`
@@ -1144,6 +1333,7 @@ use Devxisas\QrStudio\Enums\Style;
 use Devxisas\QrStudio\Enums\EyeStyle;
 use Devxisas\QrStudio\Enums\ErrorCorrection;
 use Devxisas\QrStudio\Enums\GradientType;
+use Devxisas\QrStudio\Enums\Theme;
 
 Format::Svg          // 'svg'
 Format::Eps          // 'eps'
@@ -1167,6 +1357,12 @@ GradientType::Vertical         // 'vertical'
 GradientType::Diagonal         // 'diagonal'
 GradientType::InverseDiagonal  // 'inverse_diagonal'
 GradientType::Radial           // 'radial'
+
+Theme::Ocean     // 'ocean'
+Theme::Sunset    // 'sunset'
+Theme::Forest    // 'forest'
+Theme::Midnight  // 'midnight'
+Theme::Coral     // 'coral'
 ```
 
 ---
@@ -1224,7 +1420,10 @@ That's usually the only change needed. All existing method calls (`generate`, `s
 | Automatic state reset after `generate()` | — | ✓ |
 | `EyeStyle::Pointy` (BaconQrCode 3.x) | — | ✓ |
 | PNG via `ext-gd` fallback (no Imagick needed) | — | ✓ |
-| Laravel 11 / 12 support | ✓ | ✓ |
+| WhatsApp data type | — | ✓ |
+| Built-in visual themes (ocean, sunset, forest…) | — | ✓ |
+| `saveToDisk()` — persist to any filesystem disk | — | ✓ |
+| Laravel 11 / 12 / 13 support | ✓ | ✓ |
 | SVG / EPS / PNG formats | ✓ | ✓ |
 | Image merging (logo overlay) | ✓ | ✓ |
 | Colors, gradients, eye colors | ✓ | ✓ |
