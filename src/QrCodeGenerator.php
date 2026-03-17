@@ -271,10 +271,10 @@ class QrCodeGenerator
      * Uses the disk and path configured in config/qr-studio.php by default.
      * If $filename contains no '/', the configured 'path' is prepended automatically.
      *
-     * @param  string       $text      The content to encode
-     * @param  string       $filename  Relative path on the disk (e.g. 'qr.png' or 'invoices/2025/qr.png')
-     * @param  string|null  $disk      Filesystem disk name. Null = use config('qr-studio.disk')
-     * @return string                  The full storage path where the file was saved
+     * @param  string  $text  The content to encode
+     * @param  string  $filename  Relative path on the disk (e.g. 'qr.png' or 'invoices/2025/qr.png')
+     * @param  string|null  $disk  Filesystem disk name. Null = use config('qr-studio.disk')
+     * @return string The full storage path where the file was saved
      *
      * @throws WriterException
      */

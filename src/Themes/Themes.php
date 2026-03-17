@@ -30,12 +30,12 @@ class Themes
     public static function get(string $name): array
     {
         return match ($name) {
-            'ocean'    => self::ocean(),
-            'sunset'   => self::sunset(),
-            'forest'   => self::forest(),
+            'ocean' => self::ocean(),
+            'sunset' => self::sunset(),
+            'forest' => self::forest(),
             'midnight' => self::midnight(),
-            'coral'    => self::coral(),
-            default    => throw new InvalidArgumentException(
+            'coral' => self::coral(),
+            default => throw new InvalidArgumentException(
                 "Theme [{$name}] does not exist. Available: ".implode(', ', self::available()).'.'
             ),
         };
@@ -51,9 +51,9 @@ class Themes
     private static function ocean(): array
     {
         return [
-            'gradient'        => [0, 119, 190, 0, 180, 216, 'radial'],
-            'eye'             => 'circle',
-            'style'           => ['dot', 0.6],
+            'gradient' => [0, 119, 190, 0, 180, 216, 'radial'],
+            'eye' => 'circle',
+            'style' => ['dot', 0.6],
             'errorCorrection' => 'H',
         ];
     }
@@ -63,7 +63,7 @@ class Themes
     {
         return [
             'gradient' => [255, 82, 0, 214, 0, 110, 'diagonal'],
-            'eye'      => 'square',
+            'eye' => 'square',
         ];
     }
 
@@ -71,9 +71,9 @@ class Themes
     private static function forest(): array
     {
         return [
-            'gradient'        => [22, 101, 52, 74, 222, 128, 'vertical'],
-            'eye'             => 'square',
-            'style'           => ['round', 0.6],
+            'gradient' => [22, 101, 52, 74, 222, 128, 'vertical'],
+            'eye' => 'square',
+            'style' => ['round', 0.6],
             'errorCorrection' => 'H',
         ];
     }
@@ -82,9 +82,9 @@ class Themes
     private static function midnight(): array
     {
         return [
-            'color'           => [214, 230, 255],
+            'color' => [214, 230, 255],
             'backgroundColor' => [8, 10, 40],
-            'eye'             => 'square',
+            'eye' => 'square',
         ];
     }
 
@@ -92,9 +92,9 @@ class Themes
     private static function coral(): array
     {
         return [
-            'gradient'        => [255, 107, 53, 252, 63, 135, 'horizontal'],
-            'eye'             => 'circle',
-            'style'           => ['dot', 0.55],
+            'gradient' => [255, 107, 53, 252, 63, 135, 'horizontal'],
+            'eye' => 'circle',
+            'style' => ['dot', 0.55],
             'errorCorrection' => 'H',
         ];
     }

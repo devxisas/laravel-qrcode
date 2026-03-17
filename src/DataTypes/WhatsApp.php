@@ -29,7 +29,7 @@ class WhatsApp implements DataTypeInterface
         $raw = (string) ($arguments[0] ?? '');
 
         // Keep digits only — wa.me requires the number without + or spaces
-        $this->phone   = (string) preg_replace('/[^0-9]/', '', $raw);
+        $this->phone = (string) preg_replace('/[^0-9]/', '', $raw);
         $this->message = (string) ($arguments[1] ?? '');
     }
 
