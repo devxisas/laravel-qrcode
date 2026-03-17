@@ -51,13 +51,23 @@ it('style() accepts string for backward compatibility', function () {
 
 // ─── EyeStyle enum ────────────────────────────────────────────────────────────
 
-it('eye() accepts EyeStyle enum', function () {
+it('eye() accepts EyeStyle::Circle enum', function () {
     $result = (new QrCodeGenerator)->eye(EyeStyle::Circle)->generate('test');
+    expect($result)->toBeInstanceOf(HtmlString::class);
+});
+
+it('eye() accepts EyeStyle::Pointy enum', function () {
+    $result = (new QrCodeGenerator)->eye(EyeStyle::Pointy)->generate('test');
     expect($result)->toBeInstanceOf(HtmlString::class);
 });
 
 it('eye() accepts string for backward compatibility', function () {
     $result = (new QrCodeGenerator)->eye('circle')->generate('test');
+    expect($result)->toBeInstanceOf(HtmlString::class);
+});
+
+it('eye() accepts pointy string', function () {
+    $result = (new QrCodeGenerator)->eye('pointy')->generate('test');
     expect($result)->toBeInstanceOf(HtmlString::class);
 });
 

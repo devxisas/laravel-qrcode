@@ -12,13 +12,16 @@ use BaconQrCode\Renderer\Color\ColorInterface;
 use BaconQrCode\Renderer\Color\Rgb;
 use BaconQrCode\Renderer\Eye\EyeInterface;
 use BaconQrCode\Renderer\Eye\ModuleEye;
+use BaconQrCode\Renderer\Eye\PointyEye;
 use BaconQrCode\Renderer\Eye\SimpleCircleEye;
 use BaconQrCode\Renderer\Eye\SquareEye;
+use BaconQrCode\Renderer\GDLibRenderer;
 use BaconQrCode\Renderer\Image\EpsImageBackEnd;
 use BaconQrCode\Renderer\Image\ImageBackEndInterface;
 use BaconQrCode\Renderer\Image\ImagickImageBackEnd;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererInterface;
 use BaconQrCode\Renderer\Module\DotsModule;
 use BaconQrCode\Renderer\Module\ModuleInterface;
 use BaconQrCode\Renderer\Module\RoundnessModule;
@@ -59,7 +62,7 @@ class QrCodeGenerator
 
     protected ?ErrorCorrectionLevel $errorCorrection = null;
 
-    protected string $encoding = Encoder::DEFAULT_BYTE_MODE_ECODING;
+    protected string $encoding = Encoder::DEFAULT_BYTE_MODE_ENCODING;
 
     protected Style $style = Style::Square;
 
@@ -126,7 +129,7 @@ class QrCodeGenerator
         $this->pixels = $this->defaultPixels;
         $this->margin = $this->defaultMargin;
         $this->errorCorrection = $this->resolveErrorCorrectionLevel($this->defaultErrorCorrection);
-        $this->encoding = Encoder::DEFAULT_BYTE_MODE_ECODING;
+        $this->encoding = Encoder::DEFAULT_BYTE_MODE_ENCODING;
         $this->style = Style::Square;
         $this->styleSize = null;
         $this->eyeStyle = null;
@@ -162,7 +165,7 @@ class QrCodeGenerator
      */
     public function generate(string $text, ?string $filename = null): HtmlString|string|null
     {
-        $qrCode = $this->getWriter($this->getRenderer())->writeString($text, $this->encoding, $this->errorCorrection);
+        $qrCode = $this->getWriter($this->buildRenderer())->writeString($text, $this->encoding, $this->errorCorrection);
 
         if ($this->imageMerge !== null && $this->format === Format::Png) {
             $merger = new ImageMerge(new Image($qrCode), new Image($this->imageMerge));
@@ -196,7 +199,7 @@ class QrCodeGenerator
     {
         $format = $this->format; // capture before reset() inside generate()
 
-        $qrCode = $this->getWriter($this->getRenderer())->writeString($text, $this->encoding, $this->errorCorrection);
+        $qrCode = $this->getWriter($this->buildRenderer())->writeString($text, $this->encoding, $this->errorCorrection);
 
         if ($this->imageMerge !== null && $format === Format::Png) {
             $merger = new ImageMerge(new Image($qrCode), new Image($this->imageMerge));
@@ -327,7 +330,7 @@ class QrCodeGenerator
         if (is_string($style)) {
             $style = EyeStyle::tryFrom(strtolower($style))
                 ?? throw new InvalidArgumentException(
-                    "\$style must be square or circle. [{$style}] is not a valid eye style."
+                    "\$style must be square, circle, or pointy. [{$style}] is not a valid eye style."
                 );
         }
 
@@ -441,9 +444,29 @@ class QrCodeGenerator
         return $this;
     }
 
-    public function getWriter(ImageRenderer $renderer): Writer
+    public function getWriter(RendererInterface $renderer): Writer
     {
         return new Writer($renderer);
+    }
+
+    /**
+     * Builds the appropriate renderer for the current format.
+     * For PNG, uses Imagick when available and falls back to the GD library.
+     * Note: GDLibRenderer does not support gradients.
+     */
+    public function buildRenderer(): RendererInterface
+    {
+        if ($this->format === Format::Png && ! extension_loaded('imagick')) {
+            if ($this->gradient !== null) {
+                throw new \RuntimeException(
+                    'PNG gradient rendering requires the Imagick extension. Install ext-imagick or remove the gradient.'
+                );
+            }
+
+            return new GDLibRenderer($this->pixels, $this->margin, 'png', 9, $this->getFill());
+        }
+
+        return $this->getRenderer();
     }
 
     public function getRenderer(): ImageRenderer
@@ -488,6 +511,7 @@ class QrCodeGenerator
         return match ($this->eyeStyle) {
             EyeStyle::Square => SquareEye::instance(),
             EyeStyle::Circle => SimpleCircleEye::instance(),
+            EyeStyle::Pointy => PointyEye::instance(),
             default => new ModuleEye($this->getModule()),
         };
     }
