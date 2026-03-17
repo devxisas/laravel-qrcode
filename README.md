@@ -12,8 +12,7 @@ A modern QR code generator for Laravel. Inspired by and built upon the foundatio
 
 ---
 
-<!-- SCREENSHOT: Full demo page showing QR codes in various styles, colors, and formats -->
-<!-- Place a screenshot of the demo page here once captured -->
+<!-- screenshot(basic): QrCode::size(200)->generate('https://devxisas.com') — plain SVG output -->
 
 ---
 
@@ -31,7 +30,9 @@ composer require devxisas/laravel-qrcode
 
 The service provider is registered automatically via Laravel's package auto-discovery.
 
-For PNG generation, the `ext-gd` extension is required (installed by default on most servers). For best PNG quality, `ext-imagick` is recommended:
+PNG generation uses `ext-imagick` when available, and falls back to `ext-gd` (installed by default on most servers) when Imagick is not installed. Note: the GD fallback does not support gradients.
+
+To install Imagick for best PNG quality:
 
 ```bash
 composer require ext-imagick
@@ -67,6 +68,8 @@ In a Blade template:
 {!! QrCode::size(200)->generate('https://devxisas.com') !!}
 ```
 
+<!-- screenshot(basic): QrCode::size(200)->generate('https://devxisas.com') — plain SVG output -->
+
 ---
 
 ## Configuration
@@ -96,7 +99,9 @@ QrCode::format(Format::Png)->generate('...');     // PNG via enum
 QrCode::format('eps')->generate('...');           // EPS (vector, no browser preview)
 ```
 
-<!-- SCREENSHOT: Three cards side by side — SVG, PNG, EPS placeholder -->
+> **PNG and the GD fallback:** PNG generation uses `ext-imagick` when available. When Imagick is not installed the package falls back to `ext-gd`. The GD fallback works for most use cases, but gradients are not supported under GD — use Imagick if you need gradient PNGs.
+
+<!-- screenshot(formats): SVG · PNG · EPS cards from the demo -->
 
 ---
 
@@ -144,7 +149,7 @@ QrCode::style('round', 0.7)->generate('...');
 QrCode::style(Style::Dot, 0.5)->generate('...');
 ```
 
-<!-- SCREENSHOT: Square / Dot / Round side by side -->
+<!-- screenshot(styles): Square · Dot · Round module styles -->
 
 ---
 
@@ -155,12 +160,20 @@ use Devxisas\LaravelQrCode\Enums\EyeStyle;
 
 QrCode::eye('square')->generate('...');   // default
 QrCode::eye('circle')->generate('...');
+QrCode::eye('pointy')->generate('...');   // new in BaconQrCode 3.x — curved outer + circle inner
 
 // Enum API
 QrCode::eye(EyeStyle::Circle)->generate('...');
+QrCode::eye(EyeStyle::Pointy)->generate('...');
 ```
 
-<!-- SCREENSHOT: Square eyes vs Circle eyes -->
+| Value      | Enum               | Description                                      |
+|------------|--------------------|--------------------------------------------------|
+| `square`   | `EyeStyle::Square` | Default square finder eye                        |
+| `circle`   | `EyeStyle::Circle` | Circular finder eye                              |
+| `pointy`   | `EyeStyle::Pointy` | Curved outer corner + circle inner (BaconQrCode 3.x) |
+
+<!-- screenshot(eyes): Square · Circle · Pointy eye styles -->
 
 ---
 
@@ -191,7 +204,7 @@ QrCode::eyeColor(0, 239, 68, 68)           // eye 0 — red (inner = outer)
 QrCode::eyeColor(0, 255, 255, 255, 59, 130, 246)->generate('...');
 ```
 
-<!-- SCREENSHOT: Color examples — blue, dark bg, custom eye colors -->
+<!-- screenshot(colors): Color variations including gradients -->
 
 ---
 
@@ -215,7 +228,9 @@ QrCode::gradient(59, 130, 246, 168, 85, 247, GradientType::Radial)->generate('..
 | `inverse_diagonal` | `GradientType::InverseDiagonal`  |
 | `radial`           | `GradientType::Radial`           |
 
-<!-- SCREENSHOT: Five gradient types in a row -->
+> **Note:** Gradients require `ext-imagick`. They are not supported when falling back to `ext-gd`.
+
+<!-- screenshot(gradients): All 5 gradient types -->
 
 ---
 
@@ -435,7 +450,7 @@ QrCode::calendarEvent([
 ]);
 ```
 
-<!-- SCREENSHOT: Grid of all data type QR codes -->
+<!-- screenshot(data-types): Grid of data type QR codes -->
 
 ---
 
@@ -462,6 +477,8 @@ QrCode::size(250)
       ->generate('https://devxisas.com');
 ```
 
+<!-- screenshot(combos): Showcase combinations -->
+
 ---
 
 ## Enum Reference
@@ -485,6 +502,7 @@ Style::Round         // 'round'
 
 EyeStyle::Square     // 'square'
 EyeStyle::Circle     // 'circle'
+EyeStyle::Pointy     // 'pointy'  — curved outer corner + circle inner (BaconQrCode 3.x)
 
 ErrorCorrection::Low       // 'L'
 ErrorCorrection::Medium    // 'M'
@@ -550,6 +568,8 @@ That's usually the only change needed. All existing method calls (`generate`, `s
 | Artisan `qrcode:generate` command | — | ✓ |
 | Publishable config file | — | ✓ |
 | Automatic state reset after `generate()` | — | ✓ |
+| `EyeStyle::Pointy` (BaconQrCode 3.x) | — | ✓ |
+| PNG via `ext-gd` fallback (no Imagick needed) | — | ✓ |
 | Laravel 11 / 12 support | ✓ | ✓ |
 | SVG / EPS / PNG formats | ✓ | ✓ |
 | Image merging (logo overlay) | ✓ | ✓ |
