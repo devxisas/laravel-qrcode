@@ -122,10 +122,10 @@ trait HasQrCode
      * Uses the disk and path from config('qr-studio.disk') and config('qr-studio.path')
      * by default. If $filename has no directory component, the configured path is prepended.
      *
-     * @param  string       $filename  Storage path (e.g. 'user-42.png' or 'contacts/user-42.png')
-     * @param  string|null  $disk      Filesystem disk. Null = use package config default
-     * @param  Format       $format    Output format. Defaults to PNG (best for saved files)
-     * @return string                  The storage path where the file was saved
+     * @param  string  $filename  Storage path (e.g. 'user-42.png' or 'contacts/user-42.png')
+     * @param  string|null  $disk  Filesystem disk. Null = use package config default
+     * @param  Format  $format  Output format. Defaults to PNG (best for saved files)
+     * @return string The storage path where the file was saved
      */
     public function saveQrCodeToDisk(string $filename, ?string $disk = null, Format $format = Format::Png): string
     {
